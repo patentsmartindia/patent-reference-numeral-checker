@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<head>
+    <title>
+        Patent Reference Numeral Checker
+    </title>
+
+    <script>
+
+        const wordBreakers = ["The ", " the ", " A ", " a ", " an ", "\"", " each ", 
+            " having ", " this ", " comprise", " for ", " or ", " via ",
+            ". ", ", ", " and ", " in ", " In ", "]", " through ", " into ", 
+            " as ", " of ", " to ", " with ", ":", "(", " at ",
+            " than ", " from ", " their ", "including ", "include ", 
+            " by ", " on ", " have ", " has ", " activate ", " activates ",
+            " several ", " with ", " many "];
+
+        const exclusionTerms = ["FIG. ", "Figure ", "figure "];
+
+        function formTextFromNumberTrackerObj(numTrackerObj) {
+            let text = "";
+
+            Object.keys(numTrackerObj).forEach(key => {
+                text = text + key + " : ";
+                Object.keys(numTrackerObj[key]).forEach(nestedKey => {
+                    if(nestedKey === '__blank') {
+                        text = text + " " + `(${numTrackerObj[key][nestedKey]}x);`
+                    } else {
+                        text = text + nestedKey + `(${numTrackerObj[key][nestedKey]}x);`
+                    }
+                })
+                text = text + "\n";
+            })
+
+            return text;
+        }
+
+        function onSubmit() {
+            let descText = document.getElementById('desc-text').value;
+
+            let resultText = analyzeText(descText);
+
+            document.getElementById('res-text').value = resultText;
+        }
+
+        function analyzeText(text) {
+            let numberTrackerObj = {};
+
+            let i = 0;
+
+            while(i < text.length) {
+                if(text[i] === " ") {
+                    let spaceIdx = i;
+                    let j = i + 1;
+                    let num = "";
+                    while(j < text.length && text[j] !== " ") {
+                        if(text[j].charCodeAt(0) >= 48 && text[j].charCodeAt(0) <= 57) {
+                            num = num + text[j];
+                            i = j;
+                            j++;
+                        } else {
+                            i = j;
+                            break;
+                        }
+                    }
+
+
+
+                    if(num.length) {
+                        if(!numberTrackerObj[num]) {
+                            numberTrackerObj[num] = {};
+                        }
+                        let termBefore = '';
+
+                        let exclusionFlag = false;
+                        
+                        let k = spaceIdx;
+
+                        for(let y = 0; y < exclusionTerms.length; y++) {
+                            let exclTerm = exclusionTerms[y];
+                            let exclTermLengthWord = text.substring((k - exclTerm.length + 1), (k+1));
+
+                            if(exclTermLengthWord === exclTerm) {
+                                exclusionFlag = true;
+                                break;
+                            }
+                        }
+
+                        if(!exclusionFlag) {
+                            while(k >= 0) {
+                                let breakFlag = false;
+                                for(let x = 0; x < wordBreakers.length; x++) {
+                                    let brkr = wordBreakers[x];
+                                    let brkrLengthWord = text.substring((k - brkr.length + 1), (k+1));
+
+                                    if(brkrLengthWord === brkr) {
+                                        breakFlag = true;
+                                        break;
+                                    }
+                                }
+                                if(breakFlag) {
+                                    break;
+                                } else {
+                                    termBefore = text[k] + termBefore;
+                                }
+                                k--;
+                            }
+                        }
+
+                        termBefore = termBefore.trim();
+
+                        if(termBefore.length) {
+                            if(numberTrackerObj[num][termBefore]) {
+                                numberTrackerObj[num][termBefore]++;
+                            } else {
+                                numberTrackerObj[num][termBefore] = 1
+                            }
+                        } else {
+                            if(numberTrackerObj[num]['__blank']) {
+                                numberTrackerObj[num]['__blank']++;
+                            } else {
+                                numberTrackerObj[num]['__blank'] = 1;
+                            }
+                        }
+                    }
+                }
+                i++;
+            }
+
+            let resultText = formTextFromNumberTrackerObj(numberTrackerObj);
+
+            return resultText;
+        }
+
+
+    </script>
+
+</head>
+<body>
+    <h3>
+        PATENT REFERENCE NUMERAL CHECKER
+    </h3>
+    <p>
+        Enter description text : &nbsp;&nbsp;
+        <button type="submit" id="submitBtn" onclick="onSubmit()">Analyze</button>
+    </p>
+    <br>
+    <textarea id="desc-text" name="description-text" rows=25 cols=50></textarea>
+    <textarea id="res-text" name="result-text" rows=25 cols=50 style="margin-left: 20px;" readonly></textarea>
+</body>
+</html>
